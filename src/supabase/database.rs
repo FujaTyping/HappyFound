@@ -14,26 +14,7 @@ use reqwest::{Client, StatusCode, header::HeaderMap};
 use std::env;
 
 /////////
-#[derive(Debug, Deserialize)]
-
-pub struct CreatePost {
-    general_description: Option<String>,
-    finder_name: Option<String>,
-    found_location: Option<String>,
-    contact: Option<String>,
-    image_file_link: Option<String>,
-}
-
-#[derive(Debug, FromRow, Serialize)]
-pub struct Post {
-    id: i64,
-    created_at: DateTime<Utc>,
-    general_description: String,
-    finder_name: String,
-    found_location: String,
-    contact: String,
-    image_file_link: Option<String>,
-}
+use valid::{CreatePost,Post};
 
 ///////////
 

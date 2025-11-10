@@ -1,0 +1,7 @@
+services:
+  happyfound-rust:
+    image: happyfound/rust
+    container_name: happyfound-rust
+    build: .
+    ports:
+      - "3000:3000"

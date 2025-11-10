@@ -1,7 +1,8 @@
 use axum::{body::Bytes, extract::{Query,State}, response::IntoResponse};
 use axum_valid::Garde;
 use garde::Validate;
-use serde::Deserialize;
+use serde::{Deserialize,Serialize};
+use sqlx::FromRow;
 use crate::config::*;
 #[derive(Debug)]
 pub struct ValidatedBytes(Bytes);
@@ -66,4 +67,36 @@ pub async fn form_query(
 
     println!("{:?}", sensitivedata);
     "Ok."
+}
+
+
+
+
+// For Database
+
+#[derive(Debug, Deserialize,Validate)]
+
+pub struct CreatePost {
+    #[garde(skip)]
+    pub general_description: Option<String>,
+    #[garde(skip)]
+    pub finder_name: Option<String>,
+    #[garde(skip)]
+    pub found_location: Option<String>,
+    #[garde(skip)]
+    pub contact: Option<String>,
+    #[garde(skip)]
+    pub image_file_link: Option<String>,
+}
+use chrono::{DateTime,Utc};
+
+#[derive(Debug, FromRow, Serialize)]
+pub struct Post {
+    pub id: i64,
+    pub created_at: DateTime<Utc>,
+    pub general_description: String,
+    pub finder_name: String,
+    pub found_location: String,
+    pub contact: String,
+    pub image_file_link: Option<String>,
 }

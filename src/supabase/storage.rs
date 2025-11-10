@@ -21,7 +21,7 @@ pub struct OnPOSTSuccess {
     pub key: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct OnPOSTFailure {
     #[serde(rename = "statusCode")]
     pub statuscode: String,
@@ -83,7 +83,7 @@ pub async fn new_found_post(
     println!("Making a new post for {}", foundpost.finder_name);
 
     // ✅ Continue with your async handler (e.g., uploading to Supabase)
-    make_new_post(&app_config,foundpost).await.into_response()
+    make_new_post(&app_config, foundpost).await.into_response()
 }
 
 pub async fn make_new_post(
@@ -128,15 +128,27 @@ pub async fn make_new_post(
     if response.status().is_success() {
         println!("✅ Uploaded `{}` successfully!", name);
         results.push(format!("✅ Uploaded `{}`", name));
-        let x = response.json::<OnPOSTSuccess>().await.expect("");
-        foundpost.postimage.image_file_url = format!("{}/object/public/{}", endpoint_url, x.key);
+        let onpostsuccess = response.json::<OnPOSTSuccess>().await.expect("");
+        foundpost.postimage.image_file_url =
+            format!("{}/object/public/{}", endpoint_url, onpostsuccess.key);
         println!("{}", foundpost.postimage.image_file_url);
     } else {
-        let error_text = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "Unknown error".to_string());
-        eprintln!("❌ Upload failed for `{}`: {}", name, error_text);
+        // NOTE Bro we can just use the message field from supabase bruh.
+        // Can only keep either text or json cuz
+        // .text() ans .json() consumes the response.
+
+
+        // // Getting the error text
+        // let error_text = response
+        //     .text()
+        //     .await
+        //     .unwrap_or_else(|_| "Unknown error".to_string());
+        // eprintln!("❌ Upload failed for `{}`: {}", name, error_text);
+
+        // Getting da Json
+        let onpostfailure = response.json::<OnPOSTFailure>().await.expect("");
+        eprintln!("With body: \n{:?}", onpostfailure);
+
         results.push(format!("❌ Upload failed for `{}`", name));
     }
     if results.is_empty() {
@@ -147,9 +159,12 @@ pub async fn make_new_post(
 }
 
 pub async fn upload_multipart(
+    Path(folder_path_wildcard): Path<String>,
     State(app_config): State<AppConfig>,
     mut multipart: Multipart,
+
 ) -> impl IntoResponse {
+
     // Load environment variables once
     let endpoint_url = &app_config.endpoint_url;
     let service_role = &app_config.service_role;
@@ -177,9 +192,9 @@ pub async fn upload_multipart(
         // Construct upload URL
         let url = format!(
             "{}/object/testbucket/{}/{}",
-            endpoint_url, folder_name, name
+            endpoint_url, folder_path_wildcard, name
         );
-
+        println!("Posting to {}",&url);
         // Set headers
         let mut headers = HeaderMap::new();
         headers.insert("Content-Type", "image/jpeg".parse().unwrap());
@@ -211,14 +226,21 @@ pub async fn upload_multipart(
         }
     }
 
+
     if results.is_empty() {
-        (StatusCode::BAD_REQUEST, "No files uploaded").into_response()
+        let responding = Json(serde_json::json!({
+            "message": "No files uploaded"
+        }));
+        (StatusCode::BAD_REQUEST, responding )
     } else {
-        (StatusCode::OK, results.join("\n")).into_response()
+        let responding = Json(serde_json::json!({
+            "message": results.join("\n")
+        }));
+        (StatusCode::OK, responding)
     }
 }
 
-pub async fn upload_manual(State(app_config):State<AppConfig>) -> Result<()> {
+pub async fn upload_manual(State(app_config): State<AppConfig>) -> Result<()> {
     println!("umm");
     let endpoint_url = &app_config.endpoint_url;
     let service_role = &app_config.service_role;
